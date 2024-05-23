@@ -7,18 +7,21 @@ ArgParser buildParser(ArgParser parser) {
       'help',
       abbr: 'h',
       negatable: false,
+      defaultsTo: false,
       help: 'Print this usage information.',
     )
     ..addFlag(
       'verbose',
       abbr: 'v',
-      negatable: false,
+      negatable: true,
+      defaultsTo: false,
       help: 'Show additional command output.',
     )
     ..addFlag(
       'version',
       abbr: 'V',
       negatable: false,
+      defaultsTo: false,
       help: 'Print the tool version.',
     )
     ..addOption(
@@ -28,6 +31,13 @@ ArgParser buildParser(ArgParser parser) {
       help:
           'Location where search operation will be performed. Defaults to current directory.',
       defaultsTo: Directory.current.absolute.path,
+    )
+    ..addOption(
+      'lines',
+      abbr: 'l',
+      valueHelp: 'lines-around-matched-previews',
+      help: 'Number of lines shown around matched lines.',
+      defaultsTo: '2',
     )
     ..addMultiOption(
       'include',
@@ -58,5 +68,12 @@ ArgParser buildParser(ArgParser parser) {
       abbr: 'r',
       negatable: true,
       help: 'Use search term as regular expression while searching.',
+    )
+    ..addFlag(
+      'use-colors',
+      abbr: 'P',
+      negatable: true,
+      defaultsTo: true,
+      help: 'Use colors when printing output on console.',
     );
 }

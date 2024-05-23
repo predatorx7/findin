@@ -5,6 +5,7 @@ import 'package:findin/context.dart';
 enum OutputLevel {
   log,
   verbose,
+  warning,
 }
 
 class ConsoleOutput {
@@ -26,6 +27,10 @@ class ConsoleOutput {
 
   void out(Object? message) {
     _emit(OutputLevel.log, message);
+  }
+
+  void warn(Object? message) {
+    _emit(OutputLevel.warning, message);
   }
 
   void verbose(Object? message) {

@@ -9,6 +9,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  ansi: ^0.4.2
   args: ^2.4.2
   freezed_annotation: ^2.4.1
   path: ^1.9.0
