@@ -9,7 +9,7 @@ Usage:  findin  [arguments] <search> [<replace>]
                 [-p | --path=<path-to-search>] [-i | --include=<files-to-include>] [-e | --exclude=<files-to-exclude>] [-x, --exclusion-file=<files-with-exclusions>]
                 [-c | --match-case] [-w | --match-wholeword] [-r | --use-regex]
                 [-P | --use-colors] [-l, --lines=<lines-around-matched-previews>]
-                <search> [<replace>]
+                <search-expression> [<replace>]
 
 Available flags and options:
 ''');
