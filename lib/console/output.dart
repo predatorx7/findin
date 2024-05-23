@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:findin/providers/verbose.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:findin/context.dart';
@@ -6,6 +8,7 @@ enum OutputLevel {
   log,
   verbose,
   warning,
+  error,
 }
 
 class ConsoleOutput {
@@ -19,6 +22,8 @@ class ConsoleOutput {
     switch (level) {
       case OutputLevel.verbose:
         if (!isVerboseModeEnabled) return;
+      case OutputLevel.error:
+        return stderr.writeln(message);
       default:
     }
 
@@ -31,6 +36,10 @@ class ConsoleOutput {
 
   void warn(Object? message) {
     _emit(OutputLevel.warning, message);
+  }
+
+  void error(Object? message) {
+    _emit(OutputLevel.error, message);
   }
 
   void verbose(Object? message) {

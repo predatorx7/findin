@@ -1,15 +1,17 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
+import 'package:duration/duration.dart';
 import 'package:findin/console/output.dart';
 import 'package:findin/context.dart';
 import 'package:findin/findin.dart';
 import 'package:findin/providers/help.dart';
 import 'package:findin/providers/verbose.dart';
-import 'package:findin/spec.dart';
+import 'package:intl/intl.dart';
 
 import 'build_parser.dart';
-import 'usage.dart';
+import 'print/usage.dart';
+import 'print/version.dart';
 
 void main(List<String> arguments) async {
   final ArgParser argParser = buildParser(ArgParser());
@@ -28,8 +30,7 @@ void main(List<String> arguments) async {
     }
 
     if (results.wasParsed('version')) {
-      console.out('findin version ${Spec.version}');
-      console.out('Developed by Mushaheed Syed <smushaheed@gmail.com>');
+      printVersion();
       return;
     }
 
@@ -70,34 +71,62 @@ void main(List<String> arguments) async {
 
     final Pattern searchPattern = useRegex ? RegExp(searchTerm) : searchTerm;
 
-    final searchResultStream = find.search(searchPattern).asBroadcastStream();
     int fileCount = 0;
     int countOfMatches = 0;
 
-    if (replaceTerm == null) {
-      // just show results of search
-      final outputLines = searchResultStream.asyncMap((event) {
-        fileCount++;
-        countOfMatches += event.findAllMatchCount(searchPattern);
+    final startTime = DateTime.now();
 
-        return find.toPrettyStringWithHighlightedSearchTerm(
-          event,
-          searchPattern,
-        );
-      });
-      await for (final line in outputLines) {
-        console.out(line);
-      }
-    } else {
-      // show replacements in search results
-      console.warn('! Replace in development');
+    final searchResultStream = find.search(searchPattern).asyncMap((event) {
+      fileCount++;
+      countOfMatches += event.findAllMatchCount(searchPattern);
+      return event;
+    });
+
+    // just show results of search
+    final outputLines = searchResultStream.asyncMap((event) {
+      return find.toPrettyStringWithHighlightedSearchTerm(
+        event,
+        searchPattern,
+        replaceTerm,
+      );
+    });
+    await for (final line in outputLines) {
+      console.out(line);
     }
 
-    console.out('# $countOfMatches results in $fileCount files');
+    final endTime = DateTime.now();
+    final searchDuration = endTime.difference(startTime);
+    final searchDurationPretty = prettyDuration(
+      searchDuration,
+      tersity: DurationTersity.millisecond,
+      delimiter: ', ',
+      conjunction: ' and, ',
+      abbreviated: true,
+    );
+
+    if (countOfMatches == 0) {
+      console.out(
+        'No results found. Review your settings for configured exclusions.',
+      );
+    } else {
+      final countOfMatchesText = Intl.plural(
+        countOfMatches,
+        one: '$countOfMatches result',
+        other: '$countOfMatches results',
+      );
+      final fileCountText = Intl.plural(
+        fileCount,
+        one: '$fileCount file',
+        other: '$fileCount files',
+      );
+
+      console.out(
+        'Found $countOfMatchesText from $fileCountText (in $searchDurationPretty)',
+      );
+    }
   } on FormatException catch (e) {
     // Print usage information if an invalid argument was provided.
-    console.out(e.message);
-    console.out('');
+    console.error('${e.message}\n');
     printUsage(argParser);
     exit(1);
   }

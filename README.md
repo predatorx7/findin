@@ -1,1 +1,3 @@
-A sample command-line application providing basic argument parsing with an entrypoint in `bin/`.
+# FindIn
+
+A simple tool to search & replace in files.

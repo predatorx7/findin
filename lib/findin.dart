@@ -2,7 +2,9 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:math' as math;
 import 'package:ansi/ansi.dart' as ansi;
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:path/path.dart' as path;
+import 'package:intl/intl.dart' as intl;
 
 import 'package:findin/console/output.dart';
 import 'package:findin/context.dart';
@@ -28,8 +30,11 @@ class SearchResultRecord {
   int findAllMatchCount(Pattern search) {
     final lines = matchedLines;
     if (lines == null) return 0;
-    return lines.fold(0, (totalMatches, line) {
-      return search.allMatches(line.$2).length;
+
+    return lines.fold(0, (countOfMatches, line) {
+      final matchesInLine = search.allMatches(line.$2);
+
+      return countOfMatches + matchesInLine.length;
     });
   }
 }
@@ -132,33 +137,65 @@ class FindIn {
     return matchedFilesStream;
   }
 
-  Future<StringBuffer> toPrettyStringWithHighlightedSearchTerm(
+  @protected
+  String toFileHeaderText(
     SearchResultRecord record,
     Pattern searchPattern,
-  ) async {
+  ) {
     final fileName = path.basename(record.file.path);
     final parentRelativePath = path.relative(
       record.file.parent.absolute.path,
       from: pathToSearch,
     );
-    final outputBuffer = StringBuffer();
+
+    final matchCount = record.findAllMatchCount(searchPattern);
+    final matchCountText = intl.Intl.plural(
+      matchCount,
+      one: '$matchCount match',
+      other: '$matchCount matches',
+    );
 
     String prettyColorFormatFileInformation() {
       final o = StringBuffer();
       o.write(ansi.bold('⚬ $fileName '));
-      o.write('> $parentRelativePath');
+      o.write('> $parentRelativePath ($matchCountText)');
       return o.toString();
     }
 
     String prettyFormatFileInformation() {
-      return '⚬ $fileName $parentRelativePath';
+      return '⚬ $fileName $parentRelativePath ($matchCountText)';
     }
 
-    outputBuffer.writeln(
-      useColors
-          ? prettyColorFormatFileInformation()
-          : prettyFormatFileInformation(),
-    );
+    return useColors
+        ? prettyColorFormatFileInformation()
+        : prettyFormatFileInformation();
+  }
+
+  String prettyFormatMatchedValue(String value, String? replacementValue) {
+    String prettyColorFormatMatchedValue() {
+      if (replacementValue != null) {
+        return '${ansi.bgRed(ansi.strikeThrough(value))}${ansi.bgGreen(replacementValue)}';
+      }
+      return ansi.bgGreen(value);
+    }
+
+    String prettyFormatMatchedValue() {
+      return ' > $value <';
+    }
+
+    return useColors
+        ? prettyColorFormatMatchedValue()
+        : prettyFormatMatchedValue();
+  }
+
+  Future<StringBuffer> toPrettyStringWithHighlightedSearchTerm(
+    SearchResultRecord record,
+    Pattern searchPattern,
+    String? replacementValue,
+  ) async {
+    final outputBuffer = StringBuffer();
+
+    outputBuffer.writeln(toFileHeaderText(record, searchPattern));
 
     int maxLineIndex(int oldBiggestLineIndex, (int, String) e) {
       final lineIndex = e.$1;
@@ -173,9 +210,6 @@ class FindIn {
     // string length of max index
     final indexPadding = maxIndex.toString().length;
 
-    final List<MatchedLineRecord> linesBuffer =
-        record.extraLinesForPreview?.toList() ?? [];
-
     final linesWithHighlights = record.matchedLines?.map((e) {
       String lineWithHighlights = e.$2;
 
@@ -183,31 +217,20 @@ class FindIn {
         final value = match.group(0);
         if (value == null) continue;
 
-        String prettyColorFormatMatchedValue() {
-          return ansi.green(value);
-        }
-
-        String prettyFormatMatchedValue() {
-          return ' > $value <';
-        }
-
         lineWithHighlights = lineWithHighlights.replaceAll(
           value,
-          useColors
-              ? prettyColorFormatMatchedValue()
-              : prettyFormatMatchedValue(),
+          prettyFormatMatchedValue(value, replacementValue),
         );
       }
       return (e.$1, lineWithHighlights);
     });
 
-    if (linesWithHighlights != null) {
-      linesBuffer.addAll(linesWithHighlights);
-    }
+    final List<MatchedLineRecord> linesBuffer = [
+      ...?record.extraLinesForPreview,
+      ...?linesWithHighlights,
+    ]..sort((a, b) => a.$1.compareTo(b.$1));
 
-    linesBuffer.sort((a, b) => a.$1.compareTo(b.$1));
-
-    final prettyResultLines = linesBuffer.map((it) {
+    String transformMatchedLineToPrettyString(MatchedLineRecord it) {
       final lineNumber = it.$1.toString().padRight(indexPadding);
       String prettyColorFormatLineNumber() {
         return ansi.blue(lineNumber);
@@ -218,9 +241,23 @@ class FindIn {
       }
 
       return ' ${useColors ? prettyColorFormatLineNumber() : prettyFormatLineNumber()} ${it.$2}';
-    });
+    }
 
-    outputBuffer.writeAll(prettyResultLines, '\n');
+    for (int i = 0; i < linesBuffer.length; i++) {
+      final lineInfo = linesBuffer[i];
+      if (i > 0) {
+        final previousLineIndex = linesBuffer[i - 1].$1;
+        final currentLineIndex = lineInfo.$1;
+        if (currentLineIndex - previousLineIndex > 1) {
+          // add a blank line if this is a different section from same file
+          outputBuffer.writeln();
+        }
+      }
+      outputBuffer.writeln(transformMatchedLineToPrettyString(lineInfo));
+    }
+
+    // add blank line after each file
+    outputBuffer.writeln();
 
     return outputBuffer;
   }
