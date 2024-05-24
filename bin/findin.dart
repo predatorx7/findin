@@ -5,7 +5,6 @@ import 'package:duration/duration.dart';
 import 'package:findin/console/output.dart';
 import 'package:findin/context.dart';
 import 'package:findin/findin.dart';
-import 'package:findin/providers/help.dart';
 import 'package:findin/providers/verbose.dart';
 import 'package:intl/intl.dart';
 
@@ -18,20 +17,15 @@ void main(List<String> arguments) async {
   try {
     final ArgResults results = argParser.parse(arguments);
     context
-        .read(isHelpEnabledProvider.notifier)
-        .update((state) => results.wasParsed('help'));
-    context
         .read(isVerboseEnabledProvider.notifier)
         .update((state) => results.wasParsed('verbose'));
 
-    if (context.read(isHelpEnabledProvider)) {
-      printUsage(argParser);
-      return;
+    if (results.wasParsed('help')) {
+      return printUsage(argParser);
     }
 
     if (results.wasParsed('version')) {
-      printVersion();
-      return;
+      return printVersion();
     }
 
     // Act on the arguments provided.
@@ -60,7 +54,8 @@ void main(List<String> arguments) async {
     final find = FindIn(
       pathToSearch: pathToSearch,
       filesToInclude: results.multiOption('include'),
-      filesToExclude: results.multiOption('exclude'),
+      filesToExclude: results.multiOption('exclude') +
+          (argParser.defaultFor('exclude') as List<String>),
       previewLinesAroundMatches:
           int.tryParse(results.option('lines') ?? '2') ?? 2,
       matchCase: results.flag('match-case'),
