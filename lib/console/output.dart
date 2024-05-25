@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'package:ansi/ansi.dart' as ansi;
+import 'package:findin/providers/colors.dart';
 import 'package:findin/providers/verbose.dart';
 import 'package:riverpod/riverpod.dart';
-import 'package:findin/context.dart';
+import 'package:findin/providers/context.dart';
 
 enum OutputLevel {
   log,
@@ -22,7 +24,15 @@ class ConsoleOutput {
     switch (level) {
       case OutputLevel.verbose:
         if (!isVerboseModeEnabled) return;
+      case OutputLevel.warning:
+        message = (context.read(isConsoleColorsEnabledProvider))
+            ? message
+            : ansi.yellow(message.toString());
+        break;
       case OutputLevel.error:
+        message = (context.read(isConsoleColorsEnabledProvider))
+            ? message
+            : ansi.red(message.toString());
         return stderr.writeln(message);
       default:
     }

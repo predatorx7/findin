@@ -5,10 +5,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:path/path.dart' as path;
 import 'package:intl/intl.dart' as intl;
 
-import 'package:findin/context.dart';
+import 'package:findin/providers/context.dart';
 import 'package:findin/providers/verbose.dart';
 
 import 'findin_options.dart';
+import 'providers/colors.dart';
 import 'search.dart';
 import 'search_record.dart';
 
@@ -89,7 +90,7 @@ class FindIn {
       return '⚬ $fileName $parentRelativePath ($matchCountText)';
     }
 
-    return parameters.useColors
+    return context.read(isConsoleColorsEnabledProvider)
         ? prettyColorFormatFileInformation()
         : prettyFormatFileInformation();
   }
@@ -106,7 +107,7 @@ class FindIn {
       return ' > $value <';
     }
 
-    return parameters.useColors
+    return context.read(isConsoleColorsEnabledProvider)
         ? prettyColorFormatMatchedValue()
         : prettyFormatMatchedValue();
   }
@@ -166,7 +167,10 @@ class FindIn {
         return lineNumber;
       }
 
-      return ' ${parameters.useColors ? prettyColorFormatLineNumber() : prettyFormatLineNumber()} ${it.$2}';
+      final formattedLineNumber = context.read(isConsoleColorsEnabledProvider)
+          ? prettyColorFormatLineNumber()
+          : prettyFormatLineNumber();
+      return ' $formattedLineNumber ${it.$2}';
     }
 
     for (int i = 0; i < linesBuffer.length; i++) {

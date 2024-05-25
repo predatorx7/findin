@@ -58,12 +58,18 @@ ArgParser buildParser(ArgParser parser) {
       ],
     )
     ..addMultiOption(
-      'exclusion-file',
+      'ignore-file',
       abbr: 'x',
-      valueHelp: 'files-with-exclusions',
+      valueHelp: 'ignore-files',
       defaultsTo: ['.gitignore', '.ignore'],
       help:
-          'Files with glob patterns for excluding files & folders. e.g. .gitignore.',
+          'Files with glob patterns for including & excluding files & folders. e.g. .gitignore.',
+    )
+    ..addFlag(
+      'use-ignore-files',
+      negatable: true,
+      defaultsTo: true,
+      help: 'Whether to use ignore files.',
     )
     ..addSeparator(
       'Configure how the search term is used using these options',
