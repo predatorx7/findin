@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 
-class FindinParameters {
+class FindinOptions {
   final String pathToSearch;
   final Set<String> fileSystemPathsToInclude;
   final Set<String> fileSystemPathsToExclude;
@@ -14,7 +14,7 @@ class FindinParameters {
   final bool useColors;
   final String searchTerm;
 
-  const FindinParameters({
+  const FindinOptions({
     required this.pathToSearch,
     required this.fileSystemPathsToInclude,
     required this.fileSystemPathsToExclude,
@@ -27,7 +27,7 @@ class FindinParameters {
     required this.searchTerm,
   });
 
-  FindinParameters.fromArgResults(
+  FindinOptions.fromArgResults(
     ArgResults results, {
     required this.searchTerm,
     required Iterable<String> defaultFilesToExclude,

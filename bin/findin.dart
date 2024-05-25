@@ -48,7 +48,7 @@ void main(List<String> arguments) async {
       'replace': replaceTerm,
     });
 
-    final find = FindIn(FindinParameters.fromArgResults(
+    final find = FindIn(FindinOptions.fromArgResults(
       results,
       searchTerm: searchTerm,
       defaultFilesToExclude: (argParser.defaultFor('exclude') as List<String>),
@@ -56,11 +56,7 @@ void main(List<String> arguments) async {
 
     final startTime = DateTime.now();
 
-    final searchResult = await find
-        .search(
-          find.parameters.searchPattern,
-        )
-        .toList();
+    final searchResult = await find.search().toList();
 
     final endTime = DateTime.now();
 
@@ -68,9 +64,7 @@ void main(List<String> arguments) async {
     final countOfMatches = searchResult.fold(
       0,
       (count, it) {
-        final matches = it.findAllMatchCount(
-          find.parameters.searchPattern,
-        );
+        final matches = it.totalMatches;
         return count + matches;
       },
     );
@@ -78,7 +72,6 @@ void main(List<String> arguments) async {
     await printSearchResults(searchResult, (event) {
       return find.toStringBufferAsPrettyStringWithHighlightedSearchTerm(
         event,
-        find.parameters.searchPattern,
         replaceTerm,
       );
     });

@@ -1,30 +1,33 @@
-import 'dart:io';
-
-typedef MatchedLineRecord = (int lineIndex, String lineText);
+import 'search.dart';
 
 class SearchResultRecord {
-  final File file;
-  final Iterable<MatchedLineRecord>? matchedLines;
-  final Iterable<MatchedLineRecord>? extraLinesForPreview;
+  final String filePath;
+  final Iterable<LineInfoWithMatches>? linesMatched;
+  final Iterable<LineInfo>? linesPreview;
 
   const SearchResultRecord.completed({
-    required this.file,
-    required this.matchedLines,
-    required this.extraLinesForPreview,
+    required this.filePath,
+    required this.linesMatched,
+    required this.linesPreview,
   });
 
-  const SearchResultRecord.failed({required this.file})
-      : matchedLines = null,
-        extraLinesForPreview = null;
+  const SearchResultRecord.failed({required this.filePath})
+      : linesMatched = null,
+        linesPreview = null;
 
-  int findAllMatchCount(Pattern search) {
-    final lines = matchedLines;
+  int get totalMatches {
+    final lines = linesMatched;
     if (lines == null) return 0;
 
     return lines.fold(0, (countOfMatches, line) {
-      final matchesInLine = search.allMatches(line.$2);
+      final matchesInLine = line.$3;
 
       return countOfMatches + matchesInLine.length;
     });
+  }
+
+  bool get hasResults {
+    final lines = linesMatched;
+    return lines != null && lines.isNotEmpty;
   }
 }

@@ -1,67 +1,49 @@
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math' as math;
 import 'package:ansi/ansi.dart' as ansi;
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:path/path.dart' as path;
 import 'package:intl/intl.dart' as intl;
 
-import 'package:findin/console/output.dart';
 import 'package:findin/context.dart';
 import 'package:findin/providers/verbose.dart';
 
-import 'findin_arguments.dart';
+import 'findin_options.dart';
+import 'search.dart';
 import 'search_record.dart';
 
-export 'findin_arguments.dart';
+export 'findin_options.dart';
 
 class FindIn {
-  final FindinParameters parameters;
+  final FindinOptions parameters;
 
   FindIn(this.parameters);
 
   bool get isVerboseModeEnabled => context.read(isVerboseEnabledProvider);
 
-  Future<SearchResultRecord> transformWithSearch(
-    File file,
-    Pattern searchPattern,
+  @protected
+  Future<SearchResultRecord> searchBy(
+    String filePath,
   ) async {
-    try {
-      final lines = await file.readAsLines();
-      final matchedLines = await Isolate.run(() {
-        return lines.indexed.where((entry) {
-          return entry.$2.contains(searchPattern);
-        });
-      });
-      final extraLinesForPreview = await Isolate.run(() {
-        final matchedIndices = matchedLines.map((e) => e.$1).toSet();
-        final requiredIndices = <int>{};
-        for (var index in matchedIndices) {
-          for (int i = index - parameters.previewLinesAroundMatches;
-              i < lines.length &&
-                  i <= index + parameters.previewLinesAroundMatches;
-              i++) {
-            if (i < 0) continue;
-            if (matchedIndices.contains(i)) continue;
-            requiredIndices.add(i);
-          }
-        }
-        return lines.indexed.where((record) {
-          return requiredIndices.contains(record.$1);
-        });
-      });
-      return SearchResultRecord.completed(
-        file: file,
-        matchedLines: matchedLines,
-        extraLinesForPreview: extraLinesForPreview,
-      );
-    } catch (e) {
-      console.verbose(e);
-      return SearchResultRecord.failed(file: file);
-    }
+    final searchPattern = parameters.searchPattern;
+    final previewLinesAroundMatches = parameters.previewLinesAroundMatches;
+
+    final result = await searchInFile(
+      filePath,
+      searchPattern,
+      previewLinesAroundMatches,
+    );
+
+    if (result == null) return SearchResultRecord.failed(filePath: filePath);
+
+    return SearchResultRecord.completed(
+      filePath: filePath,
+      linesMatched: result.linesMatched,
+      linesPreview: result.linesPreview,
+    );
   }
 
-  Stream<SearchResultRecord> search(Pattern searchPattern) {
+  Stream<SearchResultRecord> search() {
     final dir = Directory(parameters.pathToSearch);
 
     final matchedFilesStream = dir
@@ -73,12 +55,8 @@ class FindIn {
           ),
         )
         .where((event) => event.isFile)
-        .map((event) => File(event.entity.path))
-        .asyncMap((file) => transformWithSearch(file, searchPattern))
-        .where((event) {
-      final matchedLines = event.matchedLines;
-      return matchedLines != null && matchedLines.isNotEmpty;
-    });
+        .asyncMap((event) => searchBy(event.entity.path))
+        .where((result) => result.hasResults);
 
     return matchedFilesStream;
   }
@@ -86,15 +64,14 @@ class FindIn {
   @protected
   String toFileHeaderText(
     SearchResultRecord record,
-    Pattern searchPattern,
   ) {
-    final fileName = path.basename(record.file.path);
+    final fileName = path.basename(record.filePath);
     final parentRelativePath = path.relative(
-      record.file.parent.absolute.path,
+      FileSystemEntity.parentOf(record.filePath),
       from: parameters.pathToSearch,
     );
 
-    final matchCount = record.findAllMatchCount(searchPattern);
+    final matchCount = record.totalMatches;
     final matchCountText = intl.Intl.plural(
       matchCount,
       one: '$matchCount match',
@@ -136,12 +113,11 @@ class FindIn {
 
   Future<StringBuffer> toStringBufferAsPrettyStringWithHighlightedSearchTerm(
     SearchResultRecord record,
-    Pattern searchPattern,
     String? replacementValue,
   ) async {
     final outputBuffer = StringBuffer();
 
-    outputBuffer.writeln(toFileHeaderText(record, searchPattern));
+    outputBuffer.writeln(toFileHeaderText(record));
 
     int maxLineIndex(int oldBiggestLineIndex, (int, String) e) {
       final lineIndex = e.$1;
@@ -149,17 +125,21 @@ class FindIn {
     }
 
     final maxIndex = math.max<int>(
-      record.extraLinesForPreview?.fold<int>(0, maxLineIndex) ?? 0,
-      record.matchedLines?.fold<int>(0, maxLineIndex) ?? 0,
+      record.linesPreview?.fold<int>(0, maxLineIndex) ?? 0,
+      record.linesMatched?.fold<int>(
+            0,
+            (i, it) => maxLineIndex(i, (it.$1, it.$2)),
+          ) ??
+          0,
     );
 
     // string length of max index
     final indexPadding = maxIndex.toString().length;
 
-    final linesWithHighlights = record.matchedLines?.map((e) {
+    final linesWithHighlights = record.linesMatched?.map((e) {
       String lineWithHighlights = e.$2;
 
-      for (final match in searchPattern.allMatches(e.$2)) {
+      for (final match in e.$3) {
         final value = match.group(0);
         if (value == null) continue;
 
@@ -171,12 +151,12 @@ class FindIn {
       return (e.$1, lineWithHighlights);
     });
 
-    final List<MatchedLineRecord> linesBuffer = [
-      ...?record.extraLinesForPreview,
+    final List<LineInfo> linesBuffer = [
+      ...?record.linesPreview,
       ...?linesWithHighlights,
     ]..sort((a, b) => a.$1.compareTo(b.$1));
 
-    String transformMatchedLineToPrettyString(MatchedLineRecord it) {
+    String transformMatchedLineToPrettyString(LineInfo it) {
       final lineNumber = it.$1.toString().padRight(indexPadding);
       String prettyColorFormatLineNumber() {
         return ansi.blue(lineNumber);
