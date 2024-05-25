@@ -46,7 +46,7 @@ class FindinOptions {
         searchPattern =
             results.flag('use-regex') ? RegExp(searchTerm) : searchTerm {
     validateFormat(
-      FileSystemEntity.isFileSync(pathToSearch),
+      !FileSystemEntity.isFileSync(pathToSearch),
       'Path "$pathToSearch" is not a directory',
     );
     validateFormat(

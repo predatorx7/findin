@@ -104,7 +104,7 @@ class FindIn {
     }
 
     String prettyFormatMatchedValue() {
-      return ' > $value <';
+      return value;
     }
 
     return context.read(isConsoleColorsEnabledProvider)
