@@ -1,14 +1,14 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:duration/duration.dart';
 import 'package:findin/console/output.dart';
 import 'package:findin/context.dart';
 import 'package:findin/findin.dart';
 import 'package:findin/providers/verbose.dart';
-import 'package:intl/intl.dart';
 
 import 'build_parser.dart';
+import 'print/search_info.dart';
+import 'print/search_results.dart';
 import 'print/usage.dart';
 import 'print/version.dart';
 
@@ -48,77 +48,42 @@ void main(List<String> arguments) async {
       'replace': replaceTerm,
     });
 
-    final pathToSearch = results.option('path')!;
-    final useRegex = results.flag('use-regex');
-
-    final find = FindIn(
-      pathToSearch: pathToSearch,
-      filesToInclude: results.multiOption('include'),
-      filesToExclude: results.multiOption('exclude') +
-          (argParser.defaultFor('exclude') as List<String>),
-      previewLinesAroundMatches:
-          int.tryParse(results.option('lines') ?? '2') ?? 2,
-      matchCase: results.flag('match-case'),
-      matchWholeWord: results.flag('match-wholeword'),
-      useRegex: useRegex,
-      useColors: results.flag('use-colors'),
-    );
-
-    final Pattern searchPattern = useRegex ? RegExp(searchTerm) : searchTerm;
-
-    int fileCount = 0;
-    int countOfMatches = 0;
+    final find = FindIn(FindinParameters.fromArgResults(
+      results,
+      searchTerm: searchTerm,
+      defaultFilesToExclude: (argParser.defaultFor('exclude') as List<String>),
+    ));
 
     final startTime = DateTime.now();
 
-    final searchResultStream = find.search(searchPattern).asyncMap((event) {
-      fileCount++;
-      countOfMatches += event.findAllMatchCount(searchPattern);
-      return event;
-    });
+    final searchResult = await find
+        .search(
+          find.parameters.searchPattern,
+        )
+        .toList();
 
-    // just show results of search
-    final outputLines = searchResultStream.asyncMap((event) {
-      return find.toPrettyStringWithHighlightedSearchTerm(
+    final endTime = DateTime.now();
+
+    final fileCount = searchResult.length;
+    final countOfMatches = searchResult.fold(
+      0,
+      (count, it) {
+        final matches = it.findAllMatchCount(
+          find.parameters.searchPattern,
+        );
+        return count + matches;
+      },
+    );
+
+    await printSearchResults(searchResult, (event) {
+      return find.toStringBufferAsPrettyStringWithHighlightedSearchTerm(
         event,
-        searchPattern,
+        find.parameters.searchPattern,
         replaceTerm,
       );
     });
-    await for (final line in outputLines) {
-      console.out(line);
-    }
 
-    final endTime = DateTime.now();
-    final searchDuration = endTime.difference(startTime);
-    final searchDurationPretty = prettyDuration(
-      searchDuration,
-      tersity: DurationTersity.millisecond,
-      delimiter: ', ',
-      conjunction: ' and, ',
-      abbreviated: true,
-    );
-
-    if (countOfMatches == 0) {
-      console.out(
-        'No results found. Review your settings for configured exclusions.',
-      );
-    } else {
-      final countOfMatchesText = Intl.plural(
-        countOfMatches,
-        one: '$countOfMatches result',
-        other: '$countOfMatches results',
-      );
-      final fileCountText = Intl.plural(
-        fileCount,
-        one: '$fileCount file',
-        other: '$fileCount files',
-      );
-
-      console.out(
-        'Found $countOfMatchesText from $fileCountText (in $searchDurationPretty)',
-      );
-    }
+    printSearchInfo(fileCount, countOfMatches, startTime, endTime);
   } on FormatException catch (e) {
     // Print usage information if an invalid argument was provided.
     console.error('${e.message}\n');

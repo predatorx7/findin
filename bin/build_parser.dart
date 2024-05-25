@@ -38,14 +38,14 @@ ArgParser buildParser(ArgParser parser) {
     ..addMultiOption(
       'include',
       abbr: 'i',
-      valueHelp: 'files-to-include',
+      valueHelp: 'fs-path-to-include',
       help:
           'Add glob patterns for including files and directories while searching. e.g. *.ts, src/**/include.',
     )
     ..addMultiOption(
       'exclude',
       abbr: 'e',
-      valueHelp: 'files-to-exclude',
+      valueHelp: 'fs-path-to-exclude',
       help:
           'Add glob patterns for excluding files and directories while searching. e.g. *.js, src/**/exclude. Default exclusions can be removed by adding them in `include` cli option.',
       defaultsTo: [

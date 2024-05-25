@@ -10,70 +10,15 @@ import 'package:findin/console/output.dart';
 import 'package:findin/context.dart';
 import 'package:findin/providers/verbose.dart';
 
-typedef MatchedLineRecord = (int lineIndex, String lineText);
+import 'findin_arguments.dart';
+import 'search_record.dart';
 
-class SearchResultRecord {
-  final File file;
-  final Iterable<MatchedLineRecord>? matchedLines;
-  final Iterable<MatchedLineRecord>? extraLinesForPreview;
-
-  const SearchResultRecord.completed({
-    required this.file,
-    required this.matchedLines,
-    required this.extraLinesForPreview,
-  });
-
-  const SearchResultRecord.failed({required this.file})
-      : matchedLines = null,
-        extraLinesForPreview = null;
-
-  int findAllMatchCount(Pattern search) {
-    final lines = matchedLines;
-    if (lines == null) return 0;
-
-    return lines.fold(0, (countOfMatches, line) {
-      final matchesInLine = search.allMatches(line.$2);
-
-      return countOfMatches + matchesInLine.length;
-    });
-  }
-}
+export 'findin_arguments.dart';
 
 class FindIn {
-  final String pathToSearch;
-  final List<String> filesToInclude;
-  final List<String> filesToExclude;
-  final int previewLinesAroundMatches;
-  final bool matchCase;
-  final bool matchWholeWord;
-  final bool useRegex;
-  final bool useColors;
+  final FindinParameters parameters;
 
-  FindIn({
-    required this.pathToSearch,
-    required this.filesToInclude,
-    required this.filesToExclude,
-    required this.previewLinesAroundMatches,
-    required this.matchCase,
-    required this.matchWholeWord,
-    required this.useRegex,
-    required this.useColors,
-  }) {
-    console.verbose(toJson());
-  }
-
-  Map<String, Object?> toJson() {
-    return {
-      'pathToSearch': pathToSearch,
-      'filesToInclude': filesToInclude,
-      'filesToExclude': filesToExclude,
-      'previewLinesAroundMatches': previewLinesAroundMatches,
-      'matchCase': matchCase,
-      'matchWholeWord': matchWholeWord,
-      'useRegex': useRegex,
-      'useColors': useColors,
-    };
-  }
+  FindIn(this.parameters);
 
   bool get isVerboseModeEnabled => context.read(isVerboseEnabledProvider);
 
@@ -92,8 +37,9 @@ class FindIn {
         final matchedIndices = matchedLines.map((e) => e.$1).toSet();
         final requiredIndices = <int>{};
         for (var index in matchedIndices) {
-          for (int i = index - previewLinesAroundMatches;
-              i < lines.length && i <= index + previewLinesAroundMatches;
+          for (int i = index - parameters.previewLinesAroundMatches;
+              i < lines.length &&
+                  i <= index + parameters.previewLinesAroundMatches;
               i++) {
             if (i < 0) continue;
             if (matchedIndices.contains(i)) continue;
@@ -116,7 +62,7 @@ class FindIn {
   }
 
   Stream<SearchResultRecord> search(Pattern searchPattern) {
-    final dir = Directory(pathToSearch);
+    final dir = Directory(parameters.pathToSearch);
 
     final matchedFilesStream = dir
         .list(recursive: true)
@@ -145,7 +91,7 @@ class FindIn {
     final fileName = path.basename(record.file.path);
     final parentRelativePath = path.relative(
       record.file.parent.absolute.path,
-      from: pathToSearch,
+      from: parameters.pathToSearch,
     );
 
     final matchCount = record.findAllMatchCount(searchPattern);
@@ -166,7 +112,7 @@ class FindIn {
       return '⚬ $fileName $parentRelativePath ($matchCountText)';
     }
 
-    return useColors
+    return parameters.useColors
         ? prettyColorFormatFileInformation()
         : prettyFormatFileInformation();
   }
@@ -183,12 +129,12 @@ class FindIn {
       return ' > $value <';
     }
 
-    return useColors
+    return parameters.useColors
         ? prettyColorFormatMatchedValue()
         : prettyFormatMatchedValue();
   }
 
-  Future<StringBuffer> toPrettyStringWithHighlightedSearchTerm(
+  Future<StringBuffer> toStringBufferAsPrettyStringWithHighlightedSearchTerm(
     SearchResultRecord record,
     Pattern searchPattern,
     String? replacementValue,
@@ -240,7 +186,7 @@ class FindIn {
         return lineNumber;
       }
 
-      return ' ${useColors ? prettyColorFormatLineNumber() : prettyFormatLineNumber()} ${it.$2}';
+      return ' ${parameters.useColors ? prettyColorFormatLineNumber() : prettyFormatLineNumber()} ${it.$2}';
     }
 
     for (int i = 0; i < linesBuffer.length; i++) {
