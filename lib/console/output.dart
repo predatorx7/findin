@@ -1,10 +1,7 @@
 import 'dart:io';
 
 import 'package:ansi/ansi.dart' as ansi;
-import 'package:findin/providers/colors.dart';
-import 'package:findin/providers/verbose.dart';
-import 'package:riverpod/riverpod.dart';
-import 'package:findin/providers/context.dart';
+import 'package:findin/config.dart';
 
 enum OutputLevel {
   log,
@@ -14,23 +11,19 @@ enum OutputLevel {
 }
 
 class ConsoleOutput {
-  final ProviderContainer _context;
-
-  ConsoleOutput(ProviderContainer context) : _context = context;
-
-  bool get isVerboseModeEnabled => _context.read(isVerboseEnabledProvider);
+  const ConsoleOutput();
 
   void _emit(OutputLevel level, Object? message) {
     switch (level) {
       case OutputLevel.verbose:
-        if (!isVerboseModeEnabled) return;
+        if (!FindinConfig.main.isVerboseModeEnabled) return;
       case OutputLevel.warning:
-        message = (context.read(isConsoleColorsEnabledProvider))
+        message = FindinConfig.main.isConsoleColorsEnabled
             ? message
             : ansi.yellow(message.toString());
         break;
       case OutputLevel.error:
-        message = (context.read(isConsoleColorsEnabledProvider))
+        message = FindinConfig.main.isConsoleColorsEnabled
             ? message
             : ansi.red(message.toString());
         return stderr.writeln(message);
@@ -57,4 +50,4 @@ class ConsoleOutput {
   }
 }
 
-final console = ConsoleOutput(context);
+final console = const ConsoleOutput();

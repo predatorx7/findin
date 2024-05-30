@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+mkdir -p ~/.local/bin
+
+INSTALLATION_DIR=~/.local/bin
+INSTALLATION_LOCATION=$INSTALLATION_DIR/$EXE_NAME
+
+cp $EXE_PATH $INSTALLATION_LOCATION
+
+echo Installed at: $INSTALLATION_LOCATION

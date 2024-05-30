@@ -1,15 +1,12 @@
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:ansi/ansi.dart' as ansi;
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 import 'package:intl/intl.dart' as intl;
 
-import 'package:findin/providers/context.dart';
-import 'package:findin/providers/verbose.dart';
-
+import 'config.dart';
 import 'findin_options.dart';
-import 'providers/colors.dart';
 import 'search.dart';
 import 'search_record.dart';
 
@@ -21,8 +18,6 @@ class FindIn {
   final FindinOptions parameters;
 
   FindIn(this.parameters);
-
-  bool get isVerboseModeEnabled => context.read(isVerboseEnabledProvider);
 
   @protected
   Future<SearchResultRecord> searchBy(
@@ -92,7 +87,7 @@ class FindIn {
       return '⚬ $fileName $parentRelativePath ($matchCountText)';
     }
 
-    return context.read(isConsoleColorsEnabledProvider)
+    return FindinConfig.main.isConsoleColorsEnabled
         ? prettyColorFormatFileInformation()
         : prettyFormatFileInformation();
   }
@@ -109,7 +104,7 @@ class FindIn {
       return value;
     }
 
-    return context.read(isConsoleColorsEnabledProvider)
+    return FindinConfig.main.isConsoleColorsEnabled
         ? prettyColorFormatMatchedValue()
         : prettyFormatMatchedValue();
   }
@@ -182,7 +177,7 @@ class FindIn {
         return lineNumber;
       }
 
-      final formattedLineNumber = context.read(isConsoleColorsEnabledProvider)
+      final formattedLineNumber = FindinConfig.main.isConsoleColorsEnabled
           ? prettyColorFormatLineNumber()
           : prettyFormatLineNumber();
       return ' $formattedLineNumber ${it.$2}';

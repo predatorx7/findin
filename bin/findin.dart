@@ -1,11 +1,9 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
+import 'package:findin/config.dart';
 import 'package:findin/console/output.dart';
-import 'package:findin/providers/context.dart';
 import 'package:findin/findin.dart';
-import 'package:findin/providers/colors.dart';
-import 'package:findin/providers/verbose.dart';
 
 import 'build_parser.dart';
 import 'print/result_info.dart';
@@ -18,12 +16,10 @@ void main(List<String> arguments) async {
   final ArgParser argParser = buildParser(ArgParser());
   try {
     final ArgResults results = argParser.parse(arguments);
-    context
-        .read(isVerboseEnabledProvider.notifier)
-        .update((state) => results.flag('verbose'));
-    context
-        .read(isConsoleColorsEnabledProvider.notifier)
-        .update((state) => results.flag('use-colors'));
+    FindinConfig.main = FindinConfig.main.copyWith(
+      isVerboseModeEnabled: results.flag('verbose'),
+      isConsoleColorsEnabled: results.flag('use-colors'),
+    );
 
     if (results.flag('help')) {
       return printUsage(argParser);
