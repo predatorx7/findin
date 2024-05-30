@@ -139,15 +139,28 @@ class FindIn {
 
     final linesWithHighlights = record.linesMatched?.map((e) {
       String lineWithHighlights = e.$2;
+      int indexChange = 0;
 
       for (final match in e.$3) {
         final value = match.group(0);
         if (value == null) continue;
 
-        lineWithHighlights = lineWithHighlights.replaceAll(
-          value,
-          prettyFormatMatchedValue(value, replacementValue),
+        final buffer = StringBuffer();
+        buffer.write(
+          lineWithHighlights.substring(0, match.start + indexChange),
         );
+        final highlightedText = prettyFormatMatchedValue(
+          value,
+          replacementValue,
+        );
+        buffer.write(highlightedText);
+        buffer.write(lineWithHighlights.substring(match.end + indexChange));
+        lineWithHighlights = buffer.toString();
+
+        final highlightedTextLength = highlightedText.length;
+        final matchLength = match.end - match.start;
+        final changeDifference = highlightedTextLength - matchLength;
+        indexChange = indexChange + changeDifference;
       }
       return (e.$1, lineWithHighlights);
     });
