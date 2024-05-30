@@ -15,6 +15,8 @@ import 'search_record.dart';
 
 export 'findin_options.dart';
 
+typedef ReplacementResult = ({int filesChanged, int replacements});
+
 class FindIn {
   final FindinOptions parameters;
 
@@ -171,7 +173,7 @@ class FindIn {
     ]..sort((a, b) => a.$1.compareTo(b.$1));
 
     String transformMatchedLineToPrettyString(LineInfo it) {
-      final lineNumber = it.$1.toString().padRight(indexPadding);
+      final lineNumber = (it.$1 + 1).toString().padRight(indexPadding);
       String prettyColorFormatLineNumber() {
         return ansi.blue(lineNumber);
       }
@@ -203,5 +205,43 @@ class FindIn {
     outputBuffer.writeln();
 
     return outputBuffer;
+  }
+
+  Future<ReplacementResult> replaceAll(
+    List<SearchResultRecord> searchResult,
+    String replaceTerm,
+  ) async {
+    final temp = Directory.systemTemp;
+    await temp.create(recursive: true);
+    int countOfFilesChanged = 0;
+    int countOfReplacements = 0;
+    for (final result in searchResult) {
+      final matchedLineIndices = result.linesMatched?.map((e) => e.$1).toSet();
+      if (matchedLineIndices == null || matchedLineIndices.isEmpty) continue;
+      final tempFile = File(path.join(
+        temp.path,
+        DateTime.now().millisecond.toString(),
+      ));
+      await tempFile.create();
+      final tempFileIO = tempFile.openWrite(mode: FileMode.writeOnlyAppend);
+      final targetFile = File(result.filePath);
+      final lines = await targetFile.readAsLines();
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (matchedLineIndices.contains(i)) {
+          line = line.replaceAll(parameters.searchPattern, replaceTerm);
+        }
+        tempFileIO.writeln(line);
+      }
+      await tempFileIO.close();
+      await targetFile.delete();
+      await tempFile.rename(result.filePath);
+      countOfFilesChanged++;
+      countOfReplacements += result.totalMatches;
+    }
+    return (
+      filesChanged: countOfFilesChanged,
+      replacements: countOfReplacements
+    );
   }
 }

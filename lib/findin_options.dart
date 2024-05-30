@@ -4,6 +4,30 @@ import 'package:args/args.dart';
 
 import 'validate_format.dart';
 
+enum OnResults {
+  prompt,
+  replaceAll,
+  replaceFirst,
+  doNothing;
+
+  static from(String value) {
+    switch (value) {
+      case 'prompt':
+        return OnResults.prompt;
+      case 'replace-all':
+        return OnResults.replaceAll;
+      case 'replace-first':
+        return OnResults.replaceFirst;
+      case 'do-nothing':
+        return OnResults.doNothing;
+      default:
+        throw FormatException(
+          'Invalid $value when converting to $OnResults',
+        );
+    }
+  }
+}
+
 class FindinOptions {
   final String pathToSearch;
   final Set<String> fileSystemPathsToInclude;
@@ -13,6 +37,7 @@ class FindinOptions {
   final bool matchCase;
   final bool matchWholeWord;
   final Pattern searchPattern;
+  final OnResults onResults;
 
   const FindinOptions({
     required this.pathToSearch,
@@ -23,6 +48,7 @@ class FindinOptions {
     required this.matchCase,
     required this.matchWholeWord,
     required this.searchPattern,
+    required this.onResults,
   });
 
   FindinOptions.fromArgResults(
@@ -43,6 +69,7 @@ class FindinOptions {
         ),
         matchCase = results.flag('match-case'),
         matchWholeWord = results.flag('match-wholeword'),
+        onResults = OnResults.from(results.option('on-results')!),
         searchPattern =
             results.flag('use-regex') ? RegExp(searchTerm) : searchTerm {
     validateFormat(

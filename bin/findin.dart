@@ -8,6 +8,7 @@ import 'package:findin/providers/colors.dart';
 import 'package:findin/providers/verbose.dart';
 
 import 'build_parser.dart';
+import 'print/result_info.dart';
 import 'print/search_info.dart';
 import 'print/search_results.dart';
 import 'print/usage.dart';
@@ -81,6 +82,19 @@ void main(List<String> arguments) async {
     });
 
     printSearchInfo(fileCount, countOfMatches, startTime, endTime);
+
+    switch (find.parameters.onResults) {
+      case OnResults.replaceAll:
+        if (replaceTerm != null && replaceTerm.isNotEmpty) {
+          final startTime = DateTime.now();
+          final replacements = await find.replaceAll(searchResult, replaceTerm);
+          final endTime = DateTime.now();
+          printReplacementInfo(replacements, startTime, endTime);
+        }
+        break;
+      default:
+        console.verbose('Replacement methods are not yet implemented');
+    }
   } on FormatException catch (e) {
     // Print usage information if an invalid argument was provided.
     console.error('${e.message}\n');
