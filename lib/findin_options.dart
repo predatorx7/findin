@@ -28,11 +28,10 @@ enum OnResults {
   }
 }
 
-class FindinOptions {
+class FindinOption {
   final String pathToSearch;
   final Set<String> fileSystemPathsToInclude;
   final Set<String> fileSystemPathsToExclude;
-  final Set<String> ignoredDefaultFileSystemPathsToExclusions;
   final Set<String> ignoreFiles;
   final int previewLinesAroundMatches;
   final bool matchCase;
@@ -40,11 +39,10 @@ class FindinOptions {
   final Pattern searchPattern;
   final OnResults onResults;
 
-  const FindinOptions({
+  const FindinOption({
     required this.pathToSearch,
     required this.fileSystemPathsToInclude,
     required this.fileSystemPathsToExclude,
-    required this.ignoredDefaultFileSystemPathsToExclusions,
     required this.ignoreFiles,
     required this.previewLinesAroundMatches,
     required this.matchCase,
@@ -53,7 +51,7 @@ class FindinOptions {
     required this.onResults,
   });
 
-  FindinOptions.fromArgResults(
+  FindinOption.fromArgResults(
     ArgResults results, {
     required String searchTerm,
     required Iterable<String> defaultFilesToExclude,
@@ -62,9 +60,7 @@ class FindinOptions {
         fileSystemPathsToExclude = {
           ...defaultFilesToExclude,
           ...results.multiOption('exclude'),
-        },
-        ignoredDefaultFileSystemPathsToExclusions =
-            results.multiOption('ignore-default-exclusion').toSet(),
+        }..removeAll(results.multiOption('ignore-default-exclusion').toSet()),
         ignoreFiles = results.flag('use-ignore-files')
             ? results.multiOption('ignore-file').toSet()
             : {},
@@ -97,9 +93,6 @@ class FindinOptions {
           fileSystemPathsToInclude.toList(), // Convert Set to List
       'fileSystemPathsToExclude':
           fileSystemPathsToExclude.toList(), // Convert Set to List
-      'ignoredDefaultFileSystemPathsToExclusions':
-          ignoredDefaultFileSystemPathsToExclusions
-              .toList(), // Convert Set to List
       'ignoreFiles': ignoreFiles.toList(), // Handle nullable Set
       'previewLinesAroundMatches': previewLinesAroundMatches,
       'matchCase': matchCase,

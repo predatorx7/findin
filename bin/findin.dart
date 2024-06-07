@@ -49,7 +49,7 @@ void main(List<String> arguments) async {
       'replace': replaceTerm,
     });
 
-    final find = FindIn(FindinOptions.fromArgResults(
+    final find = FindIn(FindinOption.fromArgResults(
       results,
       searchTerm: searchTerm,
       defaultFilesToExclude: (argParser.defaultFor('exclude') as List<String>),
@@ -79,7 +79,7 @@ void main(List<String> arguments) async {
 
     printSearchInfo(fileCount, countOfMatches, startTime, endTime);
 
-    switch (find.parameters.onResults) {
+    switch (find.option.onResults) {
       case OnResults.replaceAll:
         if (replaceTerm != null && replaceTerm.isNotEmpty) {
           final startTime = DateTime.now();

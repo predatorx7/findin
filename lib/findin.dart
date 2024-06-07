@@ -4,6 +4,7 @@ import 'package:ansi/ansi.dart' as ansi;
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 import 'package:intl/intl.dart' as intl;
+import 'package:glob/glob.dart' as glob;
 
 import 'config.dart';
 import 'findin_options.dart';
@@ -15,16 +16,16 @@ export 'findin_options.dart';
 typedef ReplacementResult = ({int filesChanged, int replacements});
 
 class FindIn {
-  final FindinOptions parameters;
+  final FindinOption option;
 
-  FindIn(this.parameters);
+  FindIn(this.option);
 
   @protected
   Future<SearchResultRecord> searchBy(
     String filePath,
   ) async {
-    final searchPattern = parameters.searchPattern;
-    final previewLinesAroundMatches = parameters.previewLinesAroundMatches;
+    final searchPattern = option.searchPattern;
+    final previewLinesAroundMatches = option.previewLinesAroundMatches;
 
     final result = await searchInFile(
       filePath,
@@ -42,10 +43,28 @@ class FindIn {
   }
 
   Stream<SearchResultRecord> search() {
-    final dir = Directory(parameters.pathToSearch);
+    final dir = Directory(option.pathToSearch);
+    final includePath = option.fileSystemPathsToInclude.map(glob.Glob.new);
+    final exludePath = option.fileSystemPathsToExclude.map(glob.Glob.new);
 
     final matchedFilesStream = dir
         .list(recursive: true)
+        .where((entity) {
+          if (includePath.isNotEmpty) {
+            final isIncluded = includePath.any(
+              (pathGlob) => pathGlob.matches(entity.path),
+            );
+            if (!isIncluded) return false;
+          }
+          if (exludePath.isNotEmpty) {
+            final isExcluded = exludePath.any(
+              (pathGlob) => pathGlob.matches(entity.path),
+            );
+            if (isExcluded) return true;
+          }
+
+          return true;
+        })
         .asyncMap(
           (entity) async => (
             entity: entity,
@@ -66,7 +85,7 @@ class FindIn {
     final fileName = path.basename(record.filePath);
     final parentRelativePath = path.relative(
       FileSystemEntity.parentOf(record.filePath),
-      from: parameters.pathToSearch,
+      from: option.pathToSearch,
     );
 
     final matchCount = record.totalMatches;
@@ -224,7 +243,7 @@ class FindIn {
       for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
         if (matchedLineIndices.contains(i)) {
-          line = line.replaceAll(parameters.searchPattern, replaceTerm);
+          line = line.replaceAll(option.searchPattern, replaceTerm);
         }
         tempFileIO.writeln(line);
       }
