@@ -34,7 +34,7 @@ void printSearchInfo(
     );
 
     console.out(
-      'Found $countOfMatchesText from $fileCountText (in $searchDurationPretty)',
+      'Found $countOfMatchesText ($fileCountText) in $searchDurationPretty',
     );
   }
 }

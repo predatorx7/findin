@@ -2,6 +2,15 @@ import 'dart:io';
 import 'package:args/args.dart';
 
 ArgParser buildParser(ArgParser parser) {
+  const defaultExclusions = {
+    '**/.git',
+    '**/.svn',
+    '**/.hg',
+    '**/CVS',
+    '**/.DS_Store',
+    '**/Thumbs.db',
+  };
+
   return parser
     ..addFlag(
       'help',
@@ -47,15 +56,15 @@ ArgParser buildParser(ArgParser parser) {
       abbr: 'e',
       valueHelp: 'fs-path-to-exclude',
       help:
-          'Add glob patterns for excluding files and directories while searching. e.g. *.js, src/**/exclude. Default exclusions can be removed by adding them in `include` cli option.',
-      defaultsTo: [
-        '**/.git',
-        '**/.svn',
-        '**/.hg',
-        '**/CVS',
-        '**/.DS_Store',
-        '**/Thumbs.db',
-      ],
+          'Add glob patterns for excluding files and directories while searching. e.g. *.js, src/**/exclude. Default exclusions can be ignored by adding them in `ignore-default-exclusion` cli option.',
+      defaultsTo: defaultExclusions,
+    )
+    ..addMultiOption(
+      'ignore-default-exclusion',
+      valueHelp: 'fs-path-of-default-exclusion',
+      help:
+          'Add glob patterns of default exclusions that should be ignored when excluding files and directories while searching. e.g. ${defaultExclusions.first}.',
+      allowed: defaultExclusions,
     )
     ..addMultiOption(
       'ignore-file',

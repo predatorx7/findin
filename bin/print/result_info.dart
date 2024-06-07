@@ -27,7 +27,7 @@ void printReplacementInfo(
       other: '${replacements.filesChanged} files',
     );
     console.out(
-      'Replaced ${replacements.replacements} in $filesChangedCount (in $searchDurationPretty)',
+      'Replaced ${replacements.replacements} ($filesChangedCount changed) in $searchDurationPretty',
     );
   }
 }

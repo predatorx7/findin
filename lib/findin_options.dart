@@ -32,7 +32,8 @@ class FindinOptions {
   final String pathToSearch;
   final Set<String> fileSystemPathsToInclude;
   final Set<String> fileSystemPathsToExclude;
-  final Set<String>? ignoreFiles;
+  final Set<String> ignoredDefaultFileSystemPathsToExclusions;
+  final Set<String> ignoreFiles;
   final int previewLinesAroundMatches;
   final bool matchCase;
   final bool matchWholeWord;
@@ -43,6 +44,7 @@ class FindinOptions {
     required this.pathToSearch,
     required this.fileSystemPathsToInclude,
     required this.fileSystemPathsToExclude,
+    required this.ignoredDefaultFileSystemPathsToExclusions,
     required this.ignoreFiles,
     required this.previewLinesAroundMatches,
     required this.matchCase,
@@ -61,9 +63,11 @@ class FindinOptions {
           ...defaultFilesToExclude,
           ...results.multiOption('exclude'),
         },
+        ignoredDefaultFileSystemPathsToExclusions =
+            results.multiOption('ignore-default-exclusion').toSet(),
         ignoreFiles = results.flag('use-ignore-files')
             ? results.multiOption('ignore-file').toSet()
-            : null,
+            : {},
         previewLinesAroundMatches = _getValidPreviewLinesAroundMatches(
           results.option('lines') ?? '2',
         ),
@@ -84,6 +88,25 @@ class FindinOptions {
       previewLinesAroundMatches >= 0,
       'The \'lines\' for preview should be greater than 0',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'pathToSearch': pathToSearch,
+      'fileSystemPathsToInclude':
+          fileSystemPathsToInclude.toList(), // Convert Set to List
+      'fileSystemPathsToExclude':
+          fileSystemPathsToExclude.toList(), // Convert Set to List
+      'ignoredDefaultFileSystemPathsToExclusions':
+          ignoredDefaultFileSystemPathsToExclusions
+              .toList(), // Convert Set to List
+      'ignoreFiles': ignoreFiles.toList(), // Handle nullable Set
+      'previewLinesAroundMatches': previewLinesAroundMatches,
+      'matchCase': matchCase,
+      'matchWholeWord': matchWholeWord,
+      'searchPattern': searchPattern.toString(), // Convert Pattern to String
+      'onResults': onResults.name,
+    };
   }
 
   static int _getValidPreviewLinesAroundMatches(String value) {
