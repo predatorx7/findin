@@ -46,10 +46,67 @@ class FindIn {
     final dir = Directory(option.pathToSearch);
     final includePath = option.fileSystemPathsToInclude.map(glob.Glob.new);
     final exludePath = option.fileSystemPathsToExclude.map(glob.Glob.new);
+    final includePathFromIgnore = <glob.Glob>[];
+    final excludePathFromIgnore = <glob.Glob>[];
 
     final matchedFilesStream = dir
         .list(recursive: true)
-        .where((entity) {
+        .asyncMap(
+          (entity) async => (
+            entity: entity,
+            isFile: await FileSystemEntity.isFile(entity.path),
+          ),
+        )
+        .where((event) => event.isFile)
+        .asyncMap((entry) async {
+          if (option.ignoreFiles.isNotEmpty) {
+            final entity = entry.entity;
+            final entityPath = entity.absolute.path;
+            final parentPath = entity.parent.absolute.path;
+            final isIgnoreFile = option.ignoreFiles.any((ignoreFilePath) {
+              // path should match with full path or basename
+
+              // is a match with ignore path
+              if (path.equals(ignoreFilePath, entityPath) ||
+                  path.equals(ignoreFilePath, path.basename(entityPath))) {
+                return true;
+              }
+              // is a match with ignore path glob pattern
+              final ignoreFileGlob = glob.Glob(ignoreFilePath);
+              if (ignoreFileGlob.matches(entityPath) ||
+                  ignoreFileGlob.matches(path.basename(entityPath))) {
+                return true;
+              }
+              return false;
+            });
+            if (isIgnoreFile) {
+              try {
+                final ignoreFileLines = await File(entity.path).readAsLines();
+                final inclusions = ignoreFileLines
+                    .where((it) => !it.startsWith('!'))
+                    .map((ignorePath) => ignorePath.contains(path.separator)
+                        ? ignorePath
+                        : path.join(parentPath, ignorePath))
+                    .map(glob.Glob.new);
+                final exclusions = ignoreFileLines
+                    .where((it) => it.startsWith('!') && it.length >= 2)
+                    .map((ignorePath) => ignorePath.substring(1))
+                    .map((ignorePath) => ignorePath.contains(path.separator)
+                        ? ignorePath
+                        : path.join(parentPath, ignorePath))
+                    .map(glob.Glob.new);
+                includePathFromIgnore.addAll(inclusions);
+                excludePathFromIgnore.addAll(exclusions);
+              } on FileSystemException {
+                // do nothing.
+              }
+            }
+          }
+
+          return entry;
+        })
+        .where((entry) {
+          final entity = entry.entity;
           if (includePath.isNotEmpty) {
             final isIncluded = includePath.any(
               (pathGlob) => pathGlob.matches(entity.path),
@@ -60,18 +117,25 @@ class FindIn {
             final isExcluded = exludePath.any(
               (pathGlob) => pathGlob.matches(entity.path),
             );
-            if (isExcluded) return true;
+            if (isExcluded) return false;
           }
+          // TODO: Fix inclusion and exclusion through ignore files
+          // if (excludePathFromIgnore.isNotEmpty) {
+          //   final isExcluded = excludePathFromIgnore.any(
+          //     (pathGlob) => pathGlob.matches(entity.path),
+          //   );
+          //   if (isExcluded) {
+          //     if (includePathFromIgnore.isNotEmpty) {
+          //       final isIncluded = includePathFromIgnore.any(
+          //         (pathGlob) => pathGlob.matches(entity.path),
+          //       );
+          //       if (!isIncluded) return false;
+          //     }
+          //   }
+          // }
 
           return true;
         })
-        .asyncMap(
-          (entity) async => (
-            entity: entity,
-            isFile: await FileSystemEntity.isFile(entity.path),
-          ),
-        )
-        .where((event) => event.isFile)
         .asyncMap((event) => searchBy(event.entity.path))
         .where((result) => result.hasResults);
 
